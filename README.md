@@ -11,3 +11,9 @@ add this
 1 12 * * * /usr/bin/python3 /path/to/script.py check_expire
 ```
 this will run check user expire every day at 12:01 AM
+## Note
+your archived_users.json location must be exist 
+you can create empty file with
+```
+touch archived_users.json
+```
