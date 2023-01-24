@@ -3,6 +3,10 @@ from datetime import datetime, timedelta
 import sys
 import uuid
 import subprocess
+
+archived_users_location="/etc/v2ray/archived_users.json"
+config_file_location="/etc/v2ray/config.json"
+
 class UserManager:
     def __init__(self, config_file):
         self.config_file = config_file
@@ -33,19 +37,22 @@ class UserManager:
         print(f"User with user {user} not found.")
 
     def check_expire(self):
+        change_file=false
         for inbound in self.config["inbounds"]:
             if inbound["protocol"] == "vmess":
                 for i, client in enumerate(inbound["settings"]["clients"]):
                    if 'exp' in client:
                         expire_time = datetime.strptime(client['exp'], '%Y-%m-%d')
                         if datetime.now() > expire_time:
+                            change_file=true
                             self.archived_user(client)
                             del inbound["settings"]["clients"][i]
                             print(f"User with user {client['user']} has been removed due to expire")
-                        self.save_config()
+         if (change_file):
+           self.save_config()
 
     def archived_user(self, client):
-        with open("archived_users.json", "r+") as json_file:
+        with open(archived_users_location, "r+") as json_file:
             try:
                 data = json.load(json_file)
                 data["users"].append(client)
@@ -64,7 +71,7 @@ class UserManager:
                     client["exp"] = (datetime.now() + timedelta(days=days_valid)).strftime("%Y-%m-%d")
                     self.config["inbounds"][0]["settings"]["clients"].append(client)
                     del data["users"][i]
-                    with open("archived_users.json", "w") as json_file:
+                    with open(archived_users_location, "w") as json_file:
                         json.dump(data, json_file)
                     self.save_config()
                     print(f"User with user {user} has been renewed for {days_valid} days.")
@@ -85,7 +92,6 @@ class UserManager:
             self.renew(*args)
         else:
             print("Invalid action.")
-config_file_location="./backupconfig.json"
 manager = UserManager(config_file_location)
 action = sys.argv[1]
 print(action)
@@ -102,7 +108,7 @@ elif action == "cli":
     elif action == "check_expire":
         manager.run(action)
     elif action == "list":
-        with open("archived_users.json") as json_file:
+        with open(archived_users_location) as json_file:
             data = json.load(json_file)
             for i, client in enumerate(data["users"]):
                 print(f"{i+1}. user: {client['user']}  Expired at: {client['exp']}")
