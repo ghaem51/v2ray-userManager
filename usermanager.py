@@ -49,7 +49,7 @@ class UserManager:
                             del inbound["settings"]["clients"][i]
                             print(f"User with user {client['user']} has been removed due to expire")
          if (change_file):
-           self.save_config()
+            self.save_config()
 
     def archived_user(self, client):
         with open(archived_users_location, "r+") as json_file:
