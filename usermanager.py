@@ -37,18 +37,18 @@ class UserManager:
         print(f"User with user {user} not found.")
 
     def check_expire(self):
-        change_file=false
+        change_file=False
         for inbound in self.config["inbounds"]:
             if inbound["protocol"] == "vmess":
                 for i, client in enumerate(inbound["settings"]["clients"]):
                    if 'exp' in client:
                         expire_time = datetime.strptime(client['exp'], '%Y-%m-%d')
                         if datetime.now() > expire_time:
-                            change_file=true
+                            change_file=True
                             self.archived_user(client)
                             del inbound["settings"]["clients"][i]
                             print(f"User with user {client['user']} has been removed due to expire")
-         if (change_file):
+        if change_file:
             self.save_config()
 
     def archived_user(self, client):
