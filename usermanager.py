@@ -3,9 +3,13 @@ from datetime import datetime, timedelta
 import sys
 import uuid
 import subprocess
+import os
+from dotenv import load_dotenv
 
-archived_users_location="/etc/v2ray/archived_users.json"
-config_file_location="/etc/v2ray/config.json"
+# read config from .env
+load_dotenv()
+archived_users_location = os.getenv('ARCHIVE_DATABASE_DIR')
+config_file_location = os.getenv('V2RAY_CONFIG_DIR')
 
 class UserManager:
     def __init__(self, config_file):
@@ -89,7 +93,7 @@ class UserManager:
         elif action == "check_expire":
             self.check_expire()
         elif action == "renew":
-            self.renew(*args)
+            self.renew_user(*args)
         else:
             print("Invalid action.")
 manager = UserManager(config_file_location)
