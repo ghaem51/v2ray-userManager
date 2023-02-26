@@ -68,7 +68,7 @@ class UserManager:
             print(f"User with user {client['user']} has been archived.")
 
     def renew_user(self, user, days_valid):
-        with open("archived_users.json", "r") as json_file:
+        with open(archived_users_location, "r") as json_file:
             data = json.load(json_file)
             for i, client in enumerate(data["users"]):
                 if client["user"] == user:
@@ -85,7 +85,7 @@ class UserManager:
     def save_config(self):
         with open(self.config_file, "w") as json_file:
             json.dump(self.config, json_file, indent=4)
-        subprocess.run(["systemctl", "restart", "v2ray.service"])
+        # subprocess.run(["systemctl", "restart", "v2ray.service"])
 
     def run(self, action, *args):
         if action == "add":
