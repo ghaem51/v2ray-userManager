@@ -5,9 +5,25 @@ import uuid
 import subprocess
 import os
 from dotenv import load_dotenv
+import base64
+import qrcode
+import io
 
 # read config from .env
 load_dotenv()
+connectionString= {
+    "v": "2",
+    "ps": os.getenv('V2RAY_CLIENT_NAME'),
+    "add": os.getenv('V2RAY_SERVER_ADDRESS'),
+    "port": os.getenv('V2RAY_SERVER_PORT'),
+    "id": "uuidstring",
+    "aid": "0",
+    "net": "ws",
+    "type": "none",
+    "host": os.getenv('V2RAY_SERVER_ADDRESS'),
+    "path": os.getenv('V2RAY_SERVER_PATH'),
+    "tls": "tls"
+}
 archived_users_location = os.getenv('ARCHIVE_DATABASE_DIR')
 config_file_location = os.getenv('V2RAY_CONFIG_DIR')
 
@@ -29,6 +45,7 @@ class UserManager:
           "exp": expire_time
         })
         self.save_config()
+        self.print_string(id)
 
     def remove_user(self, user):
         for inbound in self.config["inbounds"]:
@@ -81,11 +98,25 @@ class UserManager:
                     print(f"User with user {user} has been renewed for {days_valid} days.")
                     return
             print(f"User with user {user} not found in archived users.")
+    
+    def print_string(self, userId):
+        userConnectionString = connectionString
+        userConnectionString["id"] = userId
+        json_str = json.dumps(userConnectionString)
+        base64Str = base64.b64encode(json_str.encode("utf-8"))
+        userString = "vmess://"+base64Str.decode('utf-8')
+        qr = qrcode.QRCode()
+        qr.add_data(userString)
+        f = io.StringIO()
+        qr.print_ascii(out=f)
+        f.seek(0)
+        print(f.read())
+        print(userString)
 
     def save_config(self):
         with open(self.config_file, "w") as json_file:
             json.dump(self.config, json_file, indent=4)
-        # subprocess.run(["systemctl", "restart", "v2ray.service"])
+        subprocess.run(["systemctl", "restart", "v2ray.service"])
 
     def run(self, action, *args):
         if action == "add":
@@ -94,6 +125,8 @@ class UserManager:
             self.check_expire()
         elif action == "renew":
             self.renew_user(*args)
+        elif action == "printString":
+            self.print_string(*args)
         else:
             print("Invalid action.")
 manager = UserManager(config_file_location)
@@ -103,7 +136,7 @@ if action == "check_expire":
   manager.check_expire()
 elif action == "cli":
   while True:
-    action = input("Enter an action (add, check_expire, list:to list expire users, exit): ")
+    action = input("Enter an action (add, check_expire, list:to list expire users,show_connection, exit): ")
     if action == "add":
         user = input("Enter user: ")
         id = str(uuid.uuid4())
@@ -121,6 +154,17 @@ elif action == "cli":
                 user = data["users"][index - 1]["user"]
                 days_valid = int(input("Enter days valid: "))
                 manager.run("renew", user, days_valid)
+            else:
+                print("Invalid index.")
+    elif action == "show_connection":
+        with open(config_file_location) as json_file:
+            data = json.load(json_file)
+            for i, client in enumerate(data["inbounds"][0]["settings"]["clients"]):
+                print(f"{i+1}. user: {client['user']}  Expired at: {client['exp']}")
+            index = int(input("Enter the index of the user you want to renew: "))
+            if index > 0 and index <= len(data["inbounds"][0]["settings"]["clients"]):
+                user = data["inbounds"][0]["settings"]["clients"][index - 1]
+                manager.run("printString", user["id"])
             else:
                 print("Invalid index.")
     elif action == "exit":
